@@ -9,6 +9,6 @@ urlpatterns = [
     
     path('menu-items', views.MenuItemsView.as_view()),
     path('menu-items/<int:pk>', views.EditMenuItemView.as_view()),
-    path('groups/manager/users', views.managers),
+    path('groups/manager/users', views.manager_view),
     path('groups/manager/users/<int:pk>', views.remove_user),
 ]
