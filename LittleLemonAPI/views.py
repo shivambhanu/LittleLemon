@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -7,32 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 
 from rest_framework import generics, permissions
-from .serializers import MenuItemSerializer, UserSerializer, GroupSerializer
+from .serializers import MenuItemSerializer, UserSerializer
 from .models import MenuItem
 
 from django.contrib.auth.models import User, Group
 from django.shortcuts import get_object_or_404
-from rest_framework import status
-from django.core.serializers import serialize
-from django.http import JsonResponse
-
-# Create your views here.
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def secret(request):
-#     return Response({"message": "This is a secret message."})
 
 
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def manager_view(request):
-#     if request.user.groups.filter(name="Manager").exists():
-#         return Response({"message": "Welcome Mr. Manager"})
-#     else:
-#         return Response({"message": "You are not authorized"}, 404)
-
-
-
+###########################---Menu Items---###########################
 class MenuItemsView(generics.ListCreateAPIView, generics.RetrieveAPIView):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
@@ -43,7 +24,6 @@ class MenuItemsView(generics.ListCreateAPIView, generics.RetrieveAPIView):
             self.permission_classes = [permissions.IsAdminUser]
         return super().get_permissions()
         
-    
 
 class EditMenuItemView(generics.RetrieveUpdateDestroyAPIView):
     queryset = MenuItem.objects.all()
@@ -57,6 +37,7 @@ class EditMenuItemView(generics.RetrieveUpdateDestroyAPIView):
 
 
 
+###########################---Managers---###########################
 @api_view(['GET', 'POST'])
 @permission_classes([permissions.IsAdminUser])
 def manager_view(request):
@@ -84,3 +65,30 @@ def remove_user(request, pk):
     managers.user_set.remove(user)
     return Response({"message": f"Deleted {user.username} successfuly"})
 
+
+
+
+###########################---Delivery Crew---###########################
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAdminUser])
+def delivery_crew_view(request):
+    delivery_group = Group.objects.get(name="Delivery Crew")
+    
+    if request.method == 'POST':
+        username = request.data['username']
+        user = get_object_or_404(User, username=username)
+        delivery_group.user_set.add(user)
+        return Response({"message": f"{username} added to Delivery Crew Group"})
+    else:
+        delivery_guys = delivery_group.user_set.all()
+        user_serializer = UserSerializer(delivery_guys, many=True)
+        return Response(user_serializer.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAdminUser])
+def remove_delivery_crew(request, pk):
+    user = get_object_or_404(User, pk = pk)
+    delivery_group = Group.objects.get(name="Delivery Crew")
+    delivery_group.user_set.remove(user)
+    return Response({"message": f"{user.username} has been removed from Delivery Crew"})
