@@ -5,12 +5,14 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 
-from rest_framework import generics, permissions
-from .serializers import MenuItemSerializer, UserSerializer
-from .models import MenuItem
+from rest_framework import generics, permissions, status
+from .serializers import MenuItemSerializer, UserSerializer, CartSerializer
+from .models import MenuItem, Cart
 
 from django.contrib.auth.models import User, Group
 from django.shortcuts import get_object_or_404
+
+from rest_framework.authtoken.models import Token
 
 
 ###########################---Menu Items---###########################
@@ -92,3 +94,31 @@ def remove_delivery_crew(request, pk):
     delivery_group = Group.objects.get(name="Delivery Crew")
     delivery_group.user_set.remove(user)
     return Response({"message": f"{user.username} has been removed from Delivery Crew"})
+
+
+
+###########################---Cart---###########################
+@api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def cart_view(request):
+    if request.method == 'GET':
+        cart_objects = Cart.objects.filter(user_id=request.user.id)
+        cart_serializer = CartSerializer(cart_objects, many=True)
+        dict = cart_serializer.data
+        # for object in dict:
+        #     print(get_object_or_404(MenuItem, pk=object['menuitem']))
+        return Response(dict)
+    elif request.method == 'POST':
+        serializer = CartSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        all_carts = Cart.objects.filter(user_id=request.user.id)
+        all_carts.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+        
+
+
+###########################---Order Management---###########################

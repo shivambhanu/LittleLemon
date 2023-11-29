@@ -15,4 +15,9 @@ urlpatterns = [
     
     path('groups/delivery-crew/users', views.delivery_crew_view),
     path('groups/delivery-crew/users/<int:pk>', views.remove_delivery_crew),
+    
+    path('cart/menu-items', views.cart_view),
+    
+    # path('orders', views.orders_view),
+    # path('orders/<int:pk>', views.edit_order_view),
 ]
