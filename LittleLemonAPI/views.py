@@ -6,64 +6,89 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 
 from rest_framework import generics, permissions, status
-from .serializers import MenuItemSerializer, UserSerializer, CartSerializer
-from .models import MenuItem, Cart
+from .serializers import MenuItemSerializer, UserSerializer, CartSerializer, OrderItemSerializer, OrderSerializer
+from .models import MenuItem, Cart, OrderItem, Order
 
 from django.contrib.auth.models import User, Group
 from django.shortcuts import get_object_or_404
 
-from rest_framework.authtoken.models import Token
+# from rest_framework.authtoken.models import Token
 
 
 ###########################---Menu Items---###########################
-class MenuItemsView(generics.ListCreateAPIView, generics.RetrieveAPIView):
-    queryset = MenuItem.objects.all()
-    serializer_class = MenuItemSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_permissions(self):
-        if self.request.method == 'POST':
-            self.permission_classes = [permissions.IsAdminUser]
-        return super().get_permissions()
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def menuitems_view(request):
+    if request.method == 'GET':
+        menuitems = MenuItem.objects.all()
+        menuitem_serializer = MenuItemSerializer(menuitems, many=True)
+        return Response(menuitem_serializer.data, status=status.HTTP_200_OK)
+    else:
+        if request.user.groups.filter(name="manager").exists():
+            menuitem_serializer = MenuItemSerializer(data=request.data)
+            if(menuitem_serializer.is_valid()):
+                menuitem_serializer.save()
+                return Response(menuitem_serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(menuitem_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
         
-
-class EditMenuItemView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = MenuItem.objects.all()
-    serializer_class = MenuItemSerializer
-    permission_classes = [IsAuthenticated]
     
-    def get_permissions(self):
-        if self.request.method != 'GET':
-            self.permission_classes = [permissions.IsAdminUser]
-        return super().get_permissions()
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def edit_menuitems_view(request, pk):
+    menuitem_instance = get_object_or_404(MenuItem, pk=pk)
+    if request.method == 'GET':
+        menuitem_serializer = MenuItemSerializer(menuitem_instance)
+        return Response(menuitem_serializer.data)
+    else:
+        if request.user.groups.filter(name="manager").exists():
+            if request.method == 'PUT':
+                serializer = MenuItemSerializer(menuitem_instance, data=request.data)
+            elif request.method == 'PATCH':
+                serializer = MenuItemSerializer(menuitem_instance, data=request.data, partial=True)
+            else:
+                menuitem_instance.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            
+            if serializer.is_valid():
+                serializer.save()
+                return Response(status=status.HTTP_200_OK)
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+    
 
 
 
 ###########################---Managers---###########################
 @api_view(['GET', 'POST'])
-@permission_classes([permissions.IsAdminUser])
+@permission_classes([permissions.IsAuthenticated])
 def manager_view(request):
     if request.method == 'POST':
         username = request.data['username']
         if username:
             user = get_object_or_404(User, username=username)
-            managers = Group.objects.get(name="Manager")
+            managers = Group.objects.get(name="manager")
             managers.user_set.add(user)
             return Response({"message": f"{username} added to Managers Group"})
         else:
             return Response({"message": "Enter the fking username!"})
     else:
-        group = Group.objects.get(name="Manager")
+        group = Group.objects.get(name="manager")
         queryset = group.user_set.all()
         serializer = UserSerializer(queryset, many=True)
         return Response(serializer.data)
 
 
 @api_view(['DELETE'])
-@permission_classes([permissions.IsAdminUser])
+@permission_classes([permissions.IsAuthenticated])
 def remove_user(request, pk):
     user = get_object_or_404(User, pk=pk)
-    managers = Group.objects.get(name="Manager")
+    managers = Group.objects.get(name="manager")
     managers.user_set.remove(user)
     return Response({"message": f"Deleted {user.username} successfuly"})
 
@@ -72,9 +97,9 @@ def remove_user(request, pk):
 
 ###########################---Delivery Crew---###########################
 @api_view(['GET', 'POST'])
-@permission_classes([permissions.IsAdminUser])
+@permission_classes([permissions.IsAuthenticated])
 def delivery_crew_view(request):
-    delivery_group = Group.objects.get(name="Delivery Crew")
+    delivery_group = Group.objects.get(name="delivery-crew")
     
     if request.method == 'POST':
         username = request.data['username']
@@ -88,10 +113,10 @@ def delivery_crew_view(request):
 
 
 @api_view(['DELETE'])
-@permission_classes([permissions.IsAdminUser])
+@permission_classes([permissions.IsAuthenticated])
 def remove_delivery_crew(request, pk):
     user = get_object_or_404(User, pk = pk)
-    delivery_group = Group.objects.get(name="Delivery Crew")
+    delivery_group = Group.objects.get(name="delivery-crew")
     delivery_group.user_set.remove(user)
     return Response({"message": f"{user.username} has been removed from Delivery Crew"})
 
@@ -122,3 +147,9 @@ def cart_view(request):
 
 
 ###########################---Order Management---###########################
+def orders_view(request):
+    orders = Order.objects.filter(user_id=request.user.id)
+    
+    #Now use orders.id to filter all orderitem from OrderItem model
+    order_serializer = OrderItemSerializer(orders, many=True)
+    return Response(order_serializer.data)
