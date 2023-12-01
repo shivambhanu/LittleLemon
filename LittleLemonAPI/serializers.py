@@ -25,15 +25,17 @@ class CartSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cart
         fields = "__all__"
+  
         
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = "__all__"
         
-
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order 
+        fields = "__all__"
+        
+        
+class OrderItemSerializer(serializers.ModelSerializer):
+    order = OrderSerializer()
+    class Meta:
+        model = OrderItem
         fields = "__all__"

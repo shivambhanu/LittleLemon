@@ -19,5 +19,5 @@ urlpatterns = [
     path('cart/menu-items', views.cart_view),
     
     path('orders', views.orders_view),
-    # path('orders/<int:pk>', views.edit_order_view),
+    path('orders/<int:pk>', views.single_order_view),
 ]
