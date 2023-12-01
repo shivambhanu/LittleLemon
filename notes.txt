@@ -1,0 +1,19 @@
+Admin username: super-user
+Admin password: pass@super
+
+
+Usernames   |   Password
+-----------------------------
+babul  ------->  pass@babul
+
+customer_1  ---> pass@cus1
+
+customer_2  ---> pass@cus2
+
+customer_3  ---> pass@cus3
+
+customer_4  ---> pass@cus4
+
+jimmydoe -----> pass@jimmy
+
+johndoe  -----> pass@john
